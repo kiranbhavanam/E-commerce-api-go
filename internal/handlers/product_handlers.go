@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"e-commerce-api/internal/errors"
 	"e-commerce-api/internal/models"
 	"e-commerce-api/internal/service"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -40,13 +40,8 @@ func (h *ProductHandler) GetByIDHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	product, err := h.service.GetProductByID(id)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "not found") {
-			http.Error(w, "product not found", http.StatusNotFound)
-			return
-		} else {
-			http.Error(w, "Failed to retrieve product", http.StatusInternalServerError)
-			return
-		}
+	h.handleServiceError(w,err)
+	return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -63,14 +58,7 @@ func (h *ProductHandler) CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = h.service.CreateProduct(&product)
 	if err != nil {
-		statusCode := http.StatusInternalServerError
-		errorMsg := strings.ToLower(err.Error())
-		if strings.Contains(errorMsg, "not found") {
-			statusCode = http.StatusNotFound
-		} else if strings.Contains(errorMsg, "invalid") {
-			statusCode = http.StatusBadRequest
-		}
-		http.Error(w, errorMsg, statusCode)
+		h.handleServiceError(w,err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -95,14 +83,7 @@ func (h *ProductHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = h.service.UpdateProduct(id, &product)
 	if err != nil {
-		statusCode := http.StatusInternalServerError
-		errorMsg := strings.ToLower(err.Error())
-		if strings.Contains(errorMsg, "not found") {
-			statusCode = http.StatusNotFound
-		} else if strings.Contains(errorMsg, "invalid") {
-			statusCode = http.StatusBadRequest
-		}
-		http.Error(w, errorMsg, statusCode)
+		h.handleServiceError(w,err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -118,12 +99,23 @@ func (h *ProductHandler) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = h.service.DeleteProduct(id)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "not found") {
-			http.Error(w, "Product not found", http.StatusNotFound)
-		} else {
-			http.Error(w, "failed to delete", http.StatusInternalServerError)
-		}
+		h.handleServiceError(w,err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+
+func (h *ProductHandler) handleServiceError(w http.ResponseWriter,err error){
+	switch e:=err.(type){
+	case *errors.ValidationError:
+		//400 bad request
+		http.Error(w,e.Error(),http.StatusBadRequest)
+	case *errors.NotFoundError:
+		//404 not found
+		http.Error(w,e.Error(),http.StatusNotFound)
+	case *errors.DuplicateError:
+		//409 duplicate
+		http.Error(w,e.Error(),http.StatusConflict)
+	}
 }

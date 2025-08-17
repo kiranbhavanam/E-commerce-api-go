@@ -14,8 +14,8 @@ type ProductRepository interface {
 */
 
 import (
+	"e-commerce-api/internal/errors"
 	"e-commerce-api/internal/models"
-	"fmt"
 	"sync"
 )
 
@@ -25,6 +25,7 @@ type ProductRepository interface {
 	Create(p *models.Product) error
 	Update(id int, p *models.Product) error
 	Delete(id int) error
+    ExistsByName(name string)bool
 }
 
 /*
@@ -73,7 +74,7 @@ func (r *InMemoryArrayRepository) GetByID(id int) (*models.Product, error) {
 			return &r.products[i], nil
 		}
 	}
-	return nil, fmt.Errorf("product not found")
+	return nil, errors.NewNotFoundError(id,"product")
 }
 
 func (r *InMemoryArrayRepository) Create(product *models.Product) error {
@@ -96,7 +97,7 @@ func (r *InMemoryArrayRepository) Update(id int, product *models.Product) error 
 			return nil
 		}
 	}
-	return fmt.Errorf("no item matched")
+	return errors.NewNotFoundError(id,"product")
 }
 
 func (r *InMemoryArrayRepository) Delete(id int) error {
@@ -108,6 +109,19 @@ func (r *InMemoryArrayRepository) Delete(id int) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("no item matched")
+	return errors.NewNotFoundError(id,"product")
 
 }
+
+func (r *InMemoryArrayRepository) ExistsByName(name string)bool{
+    r.mu.RLock()
+    defer r.mu.RUnlock()
+    
+    for _,product:=range r.products{
+        if product.Name==name{
+            return true
+        }
+    }
+    return false
+}
+// func (r *InMemoryArrayRepository) ExistsByNameExcludingID()
