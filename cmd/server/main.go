@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 )
@@ -14,11 +15,7 @@ import (
 func main() {
 
 	//Dependency creation : creating repo,service,handler instances
-	repo := repository.NewInMemoryArrayRepository()
-	err:=repo.LoadFromFile("products.json")
-	if err!=nil{
-		log.Fatal("Failed to load products:",err)
-	}
+	repo := createRepository(os.Getenv("ENV"))
 	service := service.NewProductService(repo)
 	handler := handlers.NewProductHandler(service)
 	//HTTP routing
@@ -32,5 +29,21 @@ func main() {
 	fmt.Println("Starting the server:")
 	if err := http.ListenAndServe(":8080", router); err != nil {
 		log.Fatal("Server failed:", err)
+	}
+}
+
+func createRepository(repoType string) repository.ProductRepository{
+	switch repoType{
+	case "array":
+		repo:=repository.NewInMemoryArrayRepository()
+		if fileRepo,ok:=repo.(*repository.InMemoryArrayRepository);ok{
+			fileRepo.LoadFromFile("products.json")
+		}
+		return repo
+	case "map":
+		repo:=repository.NewInMemoryMapRepository()
+		return repo
+	default:
+		return repository.NewInMemoryMapRepository()
 	}
 }
