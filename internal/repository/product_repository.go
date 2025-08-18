@@ -28,7 +28,11 @@ type ProductRepository interface {
 	Update(id int, p *models.Product) error
 	Delete(id int) error
     ExistsByName(name string)bool
+}
+
+type FileRepository interface{
 	LoadFromFile(name string)error
+	SaveToFile(name string) error
 }
 
 /*
