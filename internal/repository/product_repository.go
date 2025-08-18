@@ -16,6 +16,8 @@ type ProductRepository interface {
 import (
 	"e-commerce-api/internal/errors"
 	"e-commerce-api/internal/models"
+	"encoding/json"
+	"os"
 	"sync"
 )
 
@@ -26,6 +28,7 @@ type ProductRepository interface {
 	Update(id int, p *models.Product) error
 	Delete(id int) error
     ExistsByName(name string)bool
+	LoadFromFile(name string)error
 }
 
 /*
@@ -83,7 +86,7 @@ func (r *InMemoryArrayRepository) Create(product *models.Product) error {
 	product.ID = r.nextID
 	r.products = append(r.products, *product)
 	r.nextID++
-	return nil
+	return r.SaveToFile("products.json")
 
 }
 
@@ -94,7 +97,7 @@ func (r *InMemoryArrayRepository) Update(id int, product *models.Product) error 
 		if id == items.ID {
 			product.ID = id
 			r.products[i] = *product
-			return nil
+			return r.SaveToFile("products.json")
 		}
 	}
 	return errors.NewNotFoundError(id,"product")
@@ -106,7 +109,7 @@ func (r *InMemoryArrayRepository) Delete(id int) error {
 	for i, items := range r.products {
 		if items.ID == id {
 			r.products = append(r.products[:i], r.products[i+1:]...)
-			return nil
+			return r.SaveToFile("products.json")
 		}
 	}
 	return errors.NewNotFoundError(id,"product")
@@ -125,3 +128,30 @@ func (r *InMemoryArrayRepository) ExistsByName(name string)bool{
     return false
 }
 // func (r *InMemoryArrayRepository) ExistsByNameExcludingID()
+
+//Method to save and load data to and from a file
+func(r *InMemoryArrayRepository) SaveToFile(filename string)error{
+	data,err:=json.MarshalIndent(r.products,"","")
+	if err!=nil{
+		return err
+	}
+	return os.WriteFile(filename,data,0644)
+}
+
+func (r *InMemoryArrayRepository) LoadFromFile(filename string)error{
+	file,err:=os.Open(filename)
+	if err!=nil{
+		if os.IsNotExist(err){
+			r.products=[]models.Product{}
+			return nil
+		}
+		return err
+	}
+	defer file.Close()
+
+	bytes,err:=os.ReadFile(filename)
+	if err!=nil{
+		return err
+	}
+	return json.Unmarshal(bytes,&r.products)
+}

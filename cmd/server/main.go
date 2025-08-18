@@ -15,6 +15,10 @@ func main() {
 
 	//Dependency creation : creating repo,service,handler instances
 	repo := repository.NewInMemoryArrayRepository()
+	err:=repo.LoadFromFile("products.json")
+	if err!=nil{
+		log.Fatal("Failed to load products:",err)
+	}
 	service := service.NewProductService(repo)
 	handler := handlers.NewProductHandler(service)
 	//HTTP routing
