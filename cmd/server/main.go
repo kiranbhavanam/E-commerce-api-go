@@ -1,6 +1,7 @@
 package main
 
 import (
+	"e-commerce-api/internal/config"
 	"e-commerce-api/internal/handlers"
 	"e-commerce-api/internal/repository"
 	"e-commerce-api/internal/service"
@@ -42,6 +43,13 @@ func createRepository(repoType string) repository.ProductRepository{
 		return repo
 	case "map":
 		repo:=repository.NewInMemoryMapRepository()
+		return repo
+	case "db":
+		dbconfig:=config.LoadDBConfig()
+		repo,err:=repository.NewPostgresRepository(dbconfig.ConnectionString())
+		if err!=nil{
+			log.Fatal("error while loading postgres repo ",err)
+		}
 		return repo
 	default:
 		return repository.NewInMemoryMapRepository()
